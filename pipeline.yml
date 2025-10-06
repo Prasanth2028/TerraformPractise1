@@ -1,0 +1,109 @@
+trigger:
+  - main
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - group: GitHubPAT
+# Local variables
+  - name: TF_VERSION
+    value: '1.7.5' # Specify the Terraform version
+  - name: SPN
+    value: 'ADO' # Azure service connection name
+  - name: TF_WORKING_DIR
+    value: '$(System.DefaultWorkingDirectory)' # Working directory for Terraform
+
+stages:
+  - stage: InitPlan
+    displayName: 'Terraform Init and Plan'
+    jobs:
+      - job: TerraformPlan
+        displayName: 'Terraform Init and Plan'
+        steps:
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: '$(TF_VERSION)'
+          - task: Bash@3
+            displayName: 'Configure GitHub Token for Private Module Access'
+            inputs:
+              targetType: 'inline'
+              script: |
+                git config --global url."https://$(GITHUB_PAT)@github.com/".insteadOf "https://github.com/"
+          - task: TerraformTask@5
+            displayName: 'Terraform Init'
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              backendServiceArm: '$(SPN)'
+              backendAzureRmStorageAccountName: 'saterraformstatefile001'
+              backendAzureRmContainerName: 'tfstate'
+              backendAzureRmKey: 'terraform.tfstate'
+          - task: TerraformTask@5
+            displayName: 'Terraform Plan'
+            inputs:
+              provider: 'azurerm'
+              command: 'plan'
+              environmentServiceNameAzureRM: '$(SPN)'
+              commandOptions: '-out=$(System.DefaultWorkingDirectory)/tfplan'
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish Terraform Plan'
+            inputs:
+              targetPath: '$(System.DefaultWorkingDirectory)/tfplan'
+              artifact: 'terraform-plan'
+              publishLocation: 'pipeline'
+
+  - stage: Approval
+    displayName: 'Manual Approval'
+    dependsOn: InitPlan
+    jobs:
+      - deployment: WaitForApproval
+        displayName: 'Approval Before Apply'
+        environment: 'TerraformPratice'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: echo "Waiting for approval before proceeding to Terraform Apply"
+                  displayName: 'Approval Step'
+
+  - stage: Apply
+    displayName: 'Apply Terraform Changes'
+    dependsOn: Approval
+    jobs:
+      - job: TerraformApply
+        displayName: 'Terraform Apply'
+        steps:
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: 'latest'
+          - task: Bash@3
+            displayName: 'Configure GitHub Token for Private Module Access'
+            inputs:
+              targetType: 'inline'
+              script: |
+                git config --global url."https://$(GITHUB_PAT)@github.com/".insteadOf "https://github.com/"
+          - task: TerraformTask@5
+            displayName: 'Terraform Init'
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              backendServiceArm: '$(SPN)'
+              backendAzureRmStorageAccountName: 'saterraformstatefile001'
+              backendAzureRmContainerName: 'tfstate'
+              backendAzureRmKey: 'terraform.tfstate'
+          - task: TerraformTask@5
+            displayName: 'Terraform Plan'
+            inputs:
+              provider: 'azurerm'
+              command: 'plan'
+              environmentServiceNameAzureRM: '$(SPN)'
+          - task: TerraformTask@5
+            displayName: 'Terraform Apply'
+            inputs:
+              provider: 'azurerm'
+              command: 'apply'
+              environmentServiceNameAzureRM: '$(SPN)'
+
+
