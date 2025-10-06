@@ -1,1 +1,6 @@
 .terraform/
+# Terraform artifacts
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform.lock.hcl
