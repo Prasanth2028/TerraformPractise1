@@ -30,22 +30,30 @@ stages:
               targetType: 'inline'
               script: |
                 git config --global url."https://$(GITHUB_PAT)@github.com/".insteadOf "https://github.com/"
-          - task: TerraformTask@5
-            displayName: 'Terraform Init'
+          - task: AzureCLI@2
+            displayName: 'Azure CLI login (service connection)'
             inputs:
-              provider: 'azurerm'
-              command: 'init'
-              backendServiceArm: '$(SPN)'
-              backendAzureRmStorageAccountName: 'saterraformstatefile001'
-              backendAzureRmContainerName: 'tfstate'
-              backendAzureRmKey: 'terraform.tfstate'
-          - task: TerraformTask@5
-            displayName: 'Terraform Plan'
+              azureSubscription: '$(SPN)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Logged in to Azure via service connection"
+          - task: AzureCLI@2
+            displayName: 'Terraform Init (Azure CLI auth)'
             inputs:
-              provider: 'azurerm'
-              command: 'plan'
-              environmentServiceNameAzureRM: '$(SPN)'
-              commandOptions: '-out=$(System.DefaultWorkingDirectory)/tfplan'
+              azureSubscription: '$(SPN)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                terraform init -backend-config=storage_account_name=saterraformstatefile001 -backend-config=container_name=tfstate -backend-config=key=terraform.tfstate -backend-config=use_azuread_auth=true
+          - task: AzureCLI@2
+            displayName: 'Terraform Plan (Azure CLI auth)'
+            inputs:
+              azureSubscription: '$(SPN)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                terraform plan -out=$(System.DefaultWorkingDirectory)/tfplan
           - task: PublishPipelineArtifact@1
             displayName: 'Publish Terraform Plan'
             inputs:
@@ -84,26 +92,37 @@ stages:
               targetType: 'inline'
               script: |
                 git config --global url."https://$(GITHUB_PAT)@github.com/".insteadOf "https://github.com/"
-          - task: TerraformTask@5
-            displayName: 'Terraform Init'
+          - task: AzureCLI@2
+            displayName: 'Azure CLI login (service connection)'
             inputs:
-              provider: 'azurerm'
-              command: 'init'
-              backendServiceArm: '$(SPN)'
-              backendAzureRmStorageAccountName: 'saterraformstatefile001'
-              backendAzureRmContainerName: 'tfstate'
-              backendAzureRmKey: 'terraform.tfstate'
-          - task: TerraformTask@5
-            displayName: 'Terraform Plan'
+              azureSubscription: '$(SPN)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Logged in to Azure via service connection"
+          - task: AzureCLI@2
+            displayName: 'Terraform Init (Azure CLI auth)'
             inputs:
-              provider: 'azurerm'
-              command: 'plan'
-              environmentServiceNameAzureRM: '$(SPN)'
-          - task: TerraformTask@5
-            displayName: 'Terraform Apply'
+              azureSubscription: '$(SPN)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                terraform init -backend-config=storage_account_name=saterraformstatefile001 -backend-config=container_name=tfstate -backend-config=key=terraform.tfstate -backend-config=use_azuread_auth=true
+          - task: AzureCLI@2
+            displayName: 'Terraform Plan (Azure CLI auth)'
             inputs:
-              provider: 'azurerm'
-              command: 'apply'
-              environmentServiceNameAzureRM: '$(SPN)'
+              azureSubscription: '$(SPN)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                terraform plan
+          - task: AzureCLI@2
+            displayName: 'Terraform Apply (Azure CLI auth)'
+            inputs:
+              azureSubscription: '$(SPN)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                terraform apply -auto-approve
 
 
