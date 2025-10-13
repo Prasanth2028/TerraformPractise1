@@ -30,15 +30,25 @@ stages:
               targetType: 'inline'
               script: |
                 git config --global url."https://$(GITHUB_PAT)@github.com/".insteadOf "https://github.com/"
-          - task: TerraformTask@5
+
+          - task: AzureCLI@2
             displayName: 'Terraform Init'
             inputs:
-              provider: 'azurerm'
-              command: 'init'
-              backendServiceArm: 'ADO'
-              backendAzureRmStorageAccountName: 'saterraformstatefile001'
-              backendAzureRmContainerName: 'tfstate'
-              backendAzureRmKey: 'terraformpractise.tfstate'
+              azureSubscription: '$(SPN)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              workingDirectory: '$(TF_WORKING_DIR)'
+              inlineScript: |
+                terraform init
+          # - task: TerraformTask@5
+          #   displayName: 'Terraform Init'
+          #   inputs:
+          #     provider: 'azurerm'
+          #     command: 'init'
+          #     backendServiceArm: 'ADO'
+          #     backendAzureRmStorageAccountName: 'saterraformstatefile001'
+          #     backendAzureRmContainerName: 'tfstate'
+          #     backendAzureRmKey: 'terraformpractise.tfstate'
           - task: TerraformTask@5
             displayName: 'Terraform Plan'
             inputs:
