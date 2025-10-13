@@ -125,12 +125,12 @@ stages:
             displayName: 'Install Terraform'
             inputs:
               terraformVersion: 'latest' # Use the latest version of Terraform
-          - task: Bash@3
-            displayName: 'Configure GitHub Token for Private Module Access' # If using private modules
-            inputs:       
-              targetType: 'inline'
-              script: |
-                git config --global url."https://$(GITHUB_PAT)@github.com/".insteadOf "https://github.com/"
+          # - task: Bash@3
+          #   displayName: 'Configure GitHub Token for Private Module Access' # If using private modules
+          #   inputs:       
+          #     targetType: 'inline'
+          #     script: |
+          #       git config --global url."https://$(GITHUB_PAT)@github.com/".insteadOf "https://github.com/"
           - task: TerraformTask@5
             displayName: 'Terraform Init'
             inputs:
