@@ -160,3 +160,66 @@ stages:
               useAzureCLI: false
               environmentServiceNameAzureRM: 'ADO'
               commandOptions: '-out=$(System.DefaultWorkingDirectory)/tfplan'
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish Terraform Plan' # Publish the plan as an artifact
+            inputs:    
+              targetPath: '$(System.DefaultWorkingDirectory)/tfplan'
+              artifactName: 'terraform-plan'
+              publishLocation: 'pipeline'
+
+  - stage: Approval
+    displayName: 'Manual Approval'
+    dependsOn: InitPlan
+    jobs:
+      - deployment: WaitForApproval
+        displayName: 'Approval Before Apply'
+        environment: 'TerraformPratice'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: echo "Waiting for approval before proceeding to Terraform Apply"
+                  displayName: 'Approval Step'
+
+  - stage: Apply
+    displayName: 'Apply Terraform Changes'        
+    dependsOn: Approval
+    jobs:
+      - job: TerraformApply
+        displayName: 'Terraform Apply'    
+        steps:
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: 'latest' # Use the latest version of Terraform
+          - task: Bash@3
+            displayName: 'Configure GitHub Token for Private Module Access' # If using private modules
+            inputs:       
+              targetType: 'inline'
+              script: |
+                git config --global url."https://$(GITHUB_PAT)@github.com/".insteadOf "https://github.com/"
+          - task: TerraformTask@5
+            displayName: 'Terraform Init'
+            inputs:       
+              provider: 'azurerm'
+              command: 'init'
+              useAzureCLI: false
+              backendServiceArm: 'ADO'
+              backendAzureRmStorageAccountName: 'saterraformstatefile001'
+              backendAzureRmContainerName: 'tfstate'
+              backendAzureRmKey: 'terraformpractise.tfstate'
+          - task: TerraformTask@5
+            displayName: 'Terraform Plan'
+            inputs:      
+              provider: 'azurerm'
+              command: 'plan'
+              useAzureCLI: false
+              environmentServiceNameAzureRM: 'ADO'
+              commandOptions: '-out=$(System.DefaultWorkingDirectory)/tfplan'
+          - task: TerraformTask@5
+            displayName: 'Terraform Apply'
+            inputs:      
+              provider: 'azurerm'
+              command: 'apply'
+              useAzureCLI: false
+              environmentServiceNameAzureRM: 'ADO'  
