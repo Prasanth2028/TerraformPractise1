@@ -31,36 +31,29 @@ stages:
               script: |
                 git config --global url."https://$(GITHUB_PAT)@github.com/".insteadOf "https://github.com/"
 
-          - task: AzureCLI@2
+          - task: TerraformTask@5
             displayName: 'Terraform Init'
             inputs:
-              azureSubscription: '$(SPN)'
-              scriptType: 'bash'
-              scriptLocation: 'inlineScript'
-              workingDirectory: '$(TF_WORKING_DIR)'
-              inlineScript: |
-                terraform init
-          # - task: TerraformTask@5
-          #   displayName: 'Terraform Init'
-          #   inputs:
-          #     provider: 'azurerm'
-          #     command: 'init'
-          #     backendServiceArm: 'ADO'
-          #     backendAzureRmStorageAccountName: 'saterraformstatefile001'
-          #     backendAzureRmContainerName: 'tfstate'
-          #     backendAzureRmKey: 'terraformpractise.tfstate'
+              provider: 'azurerm'
+              command: 'init'
+              useAzureCLI: false
+              backendServiceArm: '$(SPN)'
+              backendAzureRmStorageAccountName: 'saterraformstatefile001'
+              backendAzureRmContainerName: 'tfstate'
+              backendAzureRmKey: 'terraformpractise.tfstate'
           - task: TerraformTask@5
             displayName: 'Terraform Plan'
             inputs:
               provider: 'azurerm'
               command: 'plan'
-              environmentServiceNameAzureRM: 'ADO'
+              useAzureCLI: false
+              environmentServiceNameAzureRM: '$(SPN)'
               commandOptions: '-out=$(System.DefaultWorkingDirectory)/tfplan'
           - task: PublishPipelineArtifact@1
             displayName: 'Publish Terraform Plan'
             inputs:
               targetPath: '$(System.DefaultWorkingDirectory)/tfplan'
-              artifact: 'terraform-plan'
+              artifactName: 'terraform-plan'
               publishLocation: 'pipeline'
 
   - stage: Approval
@@ -87,7 +80,7 @@ stages:
           - task: TerraformInstaller@1
             displayName: 'Install Terraform'
             inputs:
-              terraformVersion: 'latest'
+              terraformVersion: '$(TF_VERSION)'
           - task: Bash@3
             displayName: 'Configure GitHub Token for Private Module Access'
             inputs:
@@ -99,7 +92,8 @@ stages:
             inputs:
               provider: 'azurerm'
               command: 'init'
-              backendServiceArm: 'ADO'
+              useAzureCLI: false
+              backendServiceArm: '$(SPN)'
               backendAzureRmStorageAccountName: 'saterraformstatefile001'
               backendAzureRmContainerName: 'tfstate'
               backendAzureRmKey: 'terraformpractise.tfstate'
@@ -108,13 +102,15 @@ stages:
             inputs:
               provider: 'azurerm'
               command: 'plan'
-              environmentServiceNameAzureRM: 'ADO'
+              useAzureCLI: false
+              environmentServiceNameAzureRM: '$(SPN)'
               commandOptions: '-out=$(System.DefaultWorkingDirectory)/tfplan'
           - task: TerraformTask@5
             displayName: 'Terraform Apply'
             inputs:
               provider: 'azurerm'
               command: 'apply'
-              environmentServiceNameAzureRM: 'ADO'
+              useAzureCLI: false
+              environmentServiceNameAzureRM: '$(SPN)'
 
 
