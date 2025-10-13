@@ -113,6 +113,17 @@ pool:
 #               useAzureCLI: false
 #               environmentServiceNameAzureRM: '$(SPN)'
 
+# variables:
+#   - group: GitHubPAT
+# # Local variables
+#   - name: TF_VERSION
+#     value: '1.7.5' # Specify the Terraform version
+#   - name: SPN
+#     value: 'ADO' # Azure service connection name
+#   - name: TF_WORKING_DIR
+#     value: '$(System.DefaultWorkingDirectory)' # Working directory for Terraform
+variables:
+  - group: GitHubPAT
 
 stages:
   - stage: InitPlan
@@ -125,12 +136,12 @@ stages:
             displayName: 'Install Terraform'
             inputs:
               terraformVersion: 'latest' # Use the latest version of Terraform
-          # - task: Bash@3
-          #   displayName: 'Configure GitHub Token for Private Module Access' # If using private modules
-          #   inputs:       
-          #     targetType: 'inline'
-          #     script: |
-          #       git config --global url."https://$(GITHUB_PAT)@github.com/".insteadOf "https://github.com/"
+          - task: Bash@3
+            displayName: 'Configure GitHub Token for Private Module Access' # If using private modules
+            inputs:       
+              targetType: 'inline'
+              script: |
+                git config --global url."https://$(GITHUB_PAT)@github.com/".insteadOf "https://github.com/"
           - task: TerraformTask@5
             displayName: 'Terraform Init'
             inputs:
@@ -141,3 +152,11 @@ stages:
               backendAzureRmStorageAccountName: 'saterraformstatefile001'
               backendAzureRmContainerName: 'tfstate'
               backendAzureRmKey: 'terraformpractise.tfstate'
+          - task: TerraformTask@5
+            displayName: 'Terraform Plan' # Generate and save the plan
+            inputs:       
+              provider: 'azurerm'
+              command: 'plan'
+              useAzureCLI: false
+              environmentServiceNameAzureRM: 'ADO'
+              commandOptions: '-out=$(System.DefaultWorkingDirectory)/tfplan'
